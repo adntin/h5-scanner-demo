@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { Html5Qrcode } from 'html5-qrcode'
-import type { Html5QrcodeError, Html5QrcodeResult, CameraDevice } from 'html5-qrcode/esm/core'
+import type { Html5QrcodeResult, CameraDevice } from 'html5-qrcode/esm/core'
 import Toast from './Toast.vue'
 
 let html5QrCode
@@ -16,7 +16,7 @@ onMounted(() => {
       console.log('使用摄像头权限 devices =', devices)
       if (devices && devices.length) {
         html5QrCode = new Html5Qrcode('reader')
-        onStart() // 默认开启摄像头
+        onStart() // 默认开启摄像
       }
     })
     .catch((error: unknown) => {
@@ -28,7 +28,7 @@ onMounted(() => {
 const qrCodeSuccessCallback = (decodedText: string, decodedResult: Html5QrcodeResult) => {
   // decodedText: 6936520852550
   // decodedResult: {"decodedText":"6936520852550","result":{"text":"6936520852550","format":{"format":9,"formatName":"EAN_13"},"debugData":{"decoderName":"BarcodeDetector"}}}
-  console.log(`Scan Matched = ${decodedText}`, JSON.stringify(decodedResult))
+  console.log(`qrCodeSuccessCallback Matched = ${decodedText}`, decodedResult)
   if (tableData.value.includes(decodedText)) {
     toastMessage.value = `已经添加: ${decodedText}`
     return
@@ -37,9 +37,9 @@ const qrCodeSuccessCallback = (decodedText: string, decodedResult: Html5QrcodeRe
   toastMessage.value = `添加成功: ${decodedText}`
 }
 
-const qrCodeErrorCallback = (error: Html5QrcodeError) => {
-  console.error(`Scan Error message = ${message}, error = ${error}`)
-}
+// const qrCodeErrorCallback = (message: string, error: Html5QrcodeError) => {
+//   console.error(`qrCodeErrorCallback message = ${message}, error =`, error)
+// }
 
 const onStart = async () => {
   if (!html5QrCode) {
@@ -50,7 +50,7 @@ const onStart = async () => {
     { facingMode: 'environment' },
     { fps: 10, qrbox: { width: 600, height: 200 } },
     qrCodeSuccessCallback,
-    qrCodeErrorCallback,
+    // qrCodeErrorCallback,
   )
   scanning.value = true
 }
