@@ -7,6 +7,20 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    hmr: {
+      overlay: false,
+    },
+    host: true,
+    port: 8000,
+    strictPort: true,
+    // proxy: {
+    //   '/api': {
+    //     target: process.env.VITE_SERVER_URL,
+    //     changeOrigin: true,
+    //   },
+    // },
+  },
   plugins: [vue(), vueJsx(), vueDevTools()],
   resolve: {
     alias: {
