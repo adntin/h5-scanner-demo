@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { Html5Qrcode } from 'html5-qrcode'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode'
 import type { Html5QrcodeResult, CameraDevice } from 'html5-qrcode/esm/core'
 import Toast from './Toast.vue'
 
@@ -9,6 +9,35 @@ const scanning = ref<boolean>(false)
 const tableData = ref<string[]>(['2503040001', '2503040002'])
 const toastMessage = ref<string>('')
 
+const onInputFileChange = async (e) => {
+  if (e.target.files.length == 0) {
+    return
+  }
+  if (!html5QrCode) {
+    alert('html5QrCode 未初始化')
+    return
+  }
+  const state = html5QrCode.getState()
+  if (state !== Html5QrcodeScannerState.NOT_STARTED) {
+    await onStop()
+  }
+  const imageFile = e.target.files[0]
+  html5QrCode
+    .scanFile(imageFile, true)
+    .then((decodedText: string) => {
+      if (tableData.value.includes(decodedText)) {
+        toastMessage.value = `已经添加: ${decodedText}`
+        return
+      }
+      tableData.value.push(decodedText)
+      toastMessage.value = `成功添加: ${decodedText}`
+    })
+    .catch((error: unknown) => {
+      console.warn('识别失败', error)
+      toastMessage.value = `识别失败`
+    })
+}
+
 onMounted(() => {
   Html5Qrcode.getCameras()
     .then((devices: CameraDevice[]) => {
@@ -16,13 +45,23 @@ onMounted(() => {
       console.log('使用摄像头权限 devices =', devices)
       if (devices && devices.length) {
         html5QrCode = new Html5Qrcode('reader')
-        onStart() // 默认开启摄像
+      } else {
+        alert('您没有摄像头, 请使用图片识别或手工输入')
       }
     })
     .catch((error: unknown) => {
       // error: NotAllowedError: Permission denied
       console.error('使用摄像头权限 error =', error)
+      alert('您没有摄像头, 请使用图片识别或手工输入')
     })
+
+  const input = document.getElementById('qr-input-file')
+  input.addEventListener('change', onInputFileChange)
+})
+
+onUnmounted(() => {
+  const input = document.getElementById('qr-input-file')
+  input.removeEventListener('change', onInputFileChange)
 })
 
 const qrCodeSuccessCallback = (decodedText: string, decodedResult: Html5QrcodeResult) => {
@@ -34,7 +73,7 @@ const qrCodeSuccessCallback = (decodedText: string, decodedResult: Html5QrcodeRe
     return
   }
   tableData.value.push(decodedText)
-  toastMessage.value = `添加成功: ${decodedText}`
+  toastMessage.value = `成功添加: ${decodedText}`
 }
 
 // const qrCodeErrorCallback = (message: string, error: Html5QrcodeError) => {
@@ -46,9 +85,10 @@ const onStart = async () => {
     alert('html5QrCode 未初始化')
     return
   }
+
   await html5QrCode.start(
     { facingMode: 'environment' },
-    { fps: 10, qrbox: { width: 600, height: 200 } },
+    { aspectRatio: 2 / 1, fps: 10 },
     qrCodeSuccessCallback,
     // qrCodeErrorCallback,
   )
@@ -64,29 +104,49 @@ const onStop = async () => {
   scanning.value = false
 }
 
-const onDelete = (item: string) => {
-  if (window.confirm('您确认删除吗?')) {
-    tableData.value = tableData.value.filter((i) => i !== item)
+const onDelete = (index: number, item: string) => {
+  if (window.confirm(`您确认删除"${item}"吗?`)) {
+    // tableData.value = tableData.value.filter((i) => i !== item) // 不能用`filter`因为可能存在多个空字符串
+    tableData.value.splice(index, 1)
     toastMessage.value = '删除成功'
+  }
+}
+
+const onAdd = () => {
+  tableData.value.push('')
+}
+
+const onSave = () => {
+  const len = tableData.value.length
+  if (len === 0) {
+    alert('有上SRM系统, 送货单号必填')
+    return
+  }
+  if (window.confirm(`您确认${len}个送货单号吗?\r\n${tableData.value.join(', ')}`)) {
+    toastMessage.value = '保存成功'
   }
 }
 </script>
 
 <template>
   <div class="page">
-    <p>供应商编码: <input /></p>
-    <p>车牌号码: <input /></p>
-    <p>车辆类型: <input /></p>
-    <p>车辆长度: <input /></p>
-    <p>车辆尾板: <input /></p>
-    <p>司机姓名: <input /></p>
-    <p>司机身份证: <input /></p>
-    <p>自带货: <input /></p>
-    <p>随行人员: <input /></p>
-    <div class="container">
+    <div class="header">
+      <p>供应商编码: <input /></p>
+      <p>车牌号码: <input /></p>
+      <p>车辆类型: <input /></p>
+      <p>车辆长度: <input /></p>
+      <p>车辆尾板: <input /></p>
+      <p>司机姓名: <input /></p>
+      <p>司机身份证: <input /></p>
+      <p>自带货: <input /></p>
+      <p>随行人员: <input /></p>
+    </div>
+    <div id="reader" class="reader"></div>
+    <div class="toolbar">
       <button class="start" @click="onStart" v-if="!scanning">扫一扫</button>
-      <button class="stop" @click="onStop" v-if="scanning">停止</button>
-      <div id="reader"></div>
+      <button class="stop" @click="onStop" v-if="scanning">停止扫描</button>
+      <label for="qr-input-file" class="input-file">照片识别</label>
+      <input type="file" id="qr-input-file" accept="image/*" capture />
     </div>
     <table>
       <thead>
@@ -99,66 +159,68 @@ const onDelete = (item: string) => {
       <tbody>
         <tr v-for="(item, index) in tableData" :key="item">
           <td>{{ index + 1 }}</td>
-          <td><input :value="item" /></td>
-          <td>
-            <button @click="onDelete(item)">删除</button>
-          </td>
+          <td><input v-model="tableData[index]" placeholder="请输入" /></td>
+          <td><button @click="onDelete(index, item)">删除</button></td>
+        </tr>
+        <tr>
+          <td colspan="3" @click="onAdd">+添加</td>
         </tr>
       </tbody>
     </table>
+    <div class="actions">
+      <button @click="onSave">保存</button>
+    </div>
   </div>
   <Toast v-model:message="toastMessage" />
 </template>
 
-<style>
-html,
-body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
+<style scoped lang="scss">
 .page {
-  padding: 24px;
-}
-.container {
-  position: relative;
-  .start {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    z-index: 1;
-    transform: translate(-50%, -50%);
-    height: 40px;
-    width: 80px;
+  height: 100%;
+  padding: 0 24px;
+  .header {
+    padding-top: 12px;
   }
-  .stop {
-    position: absolute;
-    right: 10px;
-    top: 10px;
-    z-index: 1;
-    height: 30px;
-    width: 50px;
-  }
-
-  #reader {
+  table {
     width: 100%;
-    height: 200px;
-    background-color: gray;
-    video {
-      height: 200px;
-    }
+    text-align: center;
+  }
+  table,
+  th,
+  td {
+    border: 1px solid #555555;
+    border-collapse: collapse;
+  }
+  .actions {
+    text-align: center;
+    padding: 16px;
   }
 }
-
-table {
+.reader {
   width: 100%;
-  text-align: center;
-  margin-top: 10px;
+  aspect-ratio: 2 / 1;
+  object-fit: cover;
+  background-color: gray;
+  overflow: hidden;
+  border-radius: 6px;
 }
-table,
-th,
-td {
-  border: 1px solid #555555;
-  border-collapse: collapse;
+.toolbar {
+  margin: 8px 0 16px;
+  button {
+    padding: 6px 12px;
+    margin-right: 8px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+  }
+  input[type='file'] {
+    display: none;
+  }
+  .input-file {
+    border: 1px solid #ccc;
+    background-color: #fff;
+    display: inline-block;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
 }
 </style>

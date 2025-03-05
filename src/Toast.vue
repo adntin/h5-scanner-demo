@@ -34,6 +34,9 @@ watch(message, () => {
   bottom: 50%;
   font-size: 17px;
   transform: translate(-50%, -50%);
+  max-width: 60%;
+  line-break: anywhere;
+  overflow-wrap: anywhere;
 }
 
 #snackbar.show {
