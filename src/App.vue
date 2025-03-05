@@ -203,6 +203,9 @@ const onSave = () => {
   background-color: gray;
   overflow: hidden;
   border-radius: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 .toolbar {
   margin: 8px 0 16px;
