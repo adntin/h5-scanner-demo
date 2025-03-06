@@ -142,12 +142,6 @@ const onSave = () => {
       <p>随行人员: <input /></p>
     </div>
     <div id="reader" class="reader"></div>
-    <div class="toolbar">
-      <button class="start" @click="onStart" v-if="!scanning">扫一扫</button>
-      <button class="stop" @click="onStop" v-if="scanning">停止扫描</button>
-      <label for="qr-input-file" class="input-file">照片识别</label>
-      <input type="file" id="qr-input-file" accept="image/*" capture />
-    </div>
     <table>
       <thead>
         <tr>
@@ -159,11 +153,19 @@ const onSave = () => {
       <tbody>
         <tr v-for="(item, index) in tableData" :key="item">
           <td>{{ index + 1 }}</td>
-          <td><input v-model="tableData[index]" placeholder="请输入" /></td>
+          <td><input v-model="tableData[index]" placeholder="支持模糊匹配(后4位)" /></td>
           <td><button @click="onDelete(index, item)">删除</button></td>
         </tr>
         <tr>
-          <td colspan="3" @click="onAdd">+添加</td>
+          <td colspan="3">
+            <div class="toolbar">
+              <button @click="onStart" v-if="!scanning">+扫描识别</button>
+              <button @click="onStop" v-if="scanning">停止扫描</button>
+              <label for="qr-input-file" class="input-file">+照片识别</label>
+              <input type="file" id="qr-input-file" accept="image/*" capture />
+              <button @click="onAdd">+手工输入</button>
+            </div>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -206,23 +208,33 @@ const onSave = () => {
   display: flex;
   justify-content: center;
   align-items: center;
+  margin-bottom: 16px;
 }
 .toolbar {
-  margin: 8px 0 16px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   button {
-    padding: 6px 12px;
-    margin-right: 8px;
+    height: 30px;
+    line-height: 30px;
+    box-sizing: border-box;
+    padding: 0 8px;
     border: 1px solid #ccc;
     background-color: #fff;
+    margin: 4px 8px;
   }
   input[type='file'] {
     display: none;
   }
-  .input-file {
+  label {
+    height: 30px;
+    line-height: 30px;
+    box-sizing: border-box;
+    padding: 0 8px;
     border: 1px solid #ccc;
     background-color: #fff;
     display: inline-block;
-    padding: 6px 12px;
     cursor: pointer;
   }
 }
